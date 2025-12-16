@@ -16,9 +16,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/0glabs/0g-storage-client/common/blockchain"
-	"github.com/0glabs/0g-storage-client/indexer"
-	"github.com/0glabs/0g-storage-client/transfer"
+	"github.com/0gfoundation/0g-storage-client/common/blockchain"
+	"github.com/0gfoundation/0g-storage-client/indexer"
+	"github.com/0gfoundation/0g-storage-client/transfer"
 	_ "github.com/0glabs/0g-storage-starter/docs"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -137,7 +137,7 @@ func (c *StorageClient) Close() {
 }
 
 func (c *StorageClient) UploadFile(filePath string) (string, string, error) {
-	nodes, err := c.indexerClient.SelectNodes(c.ctx, 1, DefaultReplicas, []string{}, "max")
+	nodes, err := c.indexerClient.SelectNodes(c.ctx, uint(DefaultReplicas), nil, "max", true)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to select storage nodes: %v", err)
 	}
@@ -159,12 +159,14 @@ func (c *StorageClient) UploadFile(filePath string) (string, string, error) {
 }
 
 func (c *StorageClient) DownloadFile(rootHash, outputPath string) error {
-	nodes, err := c.indexerClient.SelectNodes(c.ctx, 1, DefaultReplicas, []string{}, "max")
+	nodes, err := c.indexerClient.SelectNodes(c.ctx, uint(DefaultReplicas), nil, "max", true)
 	if err != nil {
 		return fmt.Errorf("failed to select storage nodes: %v", err)
 	}
 
-	downloader, err := transfer.NewDownloader(nodes)
+	// Combine trusted and discovered nodes for downloader
+	allNodes := append(nodes.Trusted, nodes.Discovered...)
+	downloader, err := transfer.NewDownloader(allNodes)
 	if err != nil {
 		return fmt.Errorf("failed to create downloader: %v", err)
 	}

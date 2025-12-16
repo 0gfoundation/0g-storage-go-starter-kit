@@ -91,21 +91,21 @@ func (s *Server) handleUpload(c *gin.Context) {
 ```go
 func (c *StorageClient) UploadFile(filePath string) (string, string, error) {
     // Step 1: Select storage nodes from network
-    nodes, err := c.indexerClient.SelectNodes(c.ctx, 1, DefaultReplicas, nil)
+    nodes, err := c.indexerClient.SelectNodes(c.ctx, uint(DefaultReplicas), nil, "max", true)
     if err != nil {
         return "", "", fmt.Errorf("failed to select storage nodes: %v", err)
     }
-    
-    // Step 2: Initialize uploader with nodes
+
+    // Step 2: Initialize uploader with selected nodes
     uploader, err := transfer.NewUploader(c.ctx, c.web3Client, nodes)
     if err != nil {
         return "", "", fmt.Errorf("failed to create uploader: %v", err)
     }
-    
+
     // Step 3: Set timeout and upload file
     ctx, cancel := context.WithTimeout(c.ctx, 5*time.Minute)
     defer cancel()
-    
+
     // Step 4: Execute upload and return identifiers
     txHash, rootHash, err := uploader.UploadFile(ctx, filePath)
     return txHash.String(), rootHash.String(), nil
@@ -147,26 +147,27 @@ func (s *Server) handleDownload(c *gin.Context) {
 ```go
 func (c *StorageClient) DownloadFile(rootHash, outputPath string) error {
     // Step 1: Find nodes storing the file
-    nodes, err := c.indexerClient.SelectNodes(c.ctx, 1, DefaultReplicas, nil)
+    nodes, err := c.indexerClient.SelectNodes(c.ctx, uint(DefaultReplicas), nil, "max", true)
     if err != nil {
         return fmt.Errorf("failed to select storage nodes: %v", err)
     }
-    
-    // Step 2: Create downloader instance
-    downloader, err := transfer.NewDownloader(nodes)
+
+    // Step 2: Combine trusted and discovered nodes for downloader
+    allNodes := append(nodes.Trusted, nodes.Discovered...)
+    downloader, err := transfer.NewDownloader(allNodes)
     if err != nil {
         return fmt.Errorf("failed to create downloader: %v", err)
     }
-    
+
     // Step 3: Ensure output directory exists
     if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
         return fmt.Errorf("failed to create output directory: %v", err)
     }
-    
+
     // Step 4: Download with timeout and verification
     ctx, cancel := context.WithTimeout(c.ctx, 5*time.Minute)
     defer cancel()
-    
+
     return downloader.Download(ctx, rootHash, outputPath, true)
 }
 ```
@@ -184,7 +185,7 @@ What happens during download:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/0glabs/0g-storage-go-starter-kit
+git clone https://github.com/0gfoundation/0g-storage-go-starter-kit
 ```
 
 2. Navigate to the project directory:
@@ -239,4 +240,4 @@ const (
    - Implement retry logic for failed operations
 
 ## Next Steps
-Explore advanced SDK features in the [0G Storage Client documentation](https://github.com/0glabs/0g-storage-client). Learn more about the [0G Storage Network](https://docs.0g.ai/0g-storage).
+Explore advanced SDK features in the [0G Storage Client documentation](https://github.com/0gfoundation/0g-storage-client). Learn more about the [0G Storage Network](https://docs.0g.ai/0g-storage).

@@ -27,9 +27,9 @@ git checkout cli-version
 ## Core Components (CLI Version)
 ```go
 import (
-    "github.com/0glabs/0g-storage-client/common/blockchain"  // Web3 client wrapper
-    "github.com/0glabs/0g-storage-client/indexer"           // Node selection and management
-    "github.com/0glabs/0g-storage-client/transfer"          // File upload/download operations
+    "github.com/0gfoundation/0g-storage-client/common/blockchain"  // Web3 client wrapper
+    "github.com/0gfoundation/0g-storage-client/indexer"           // Node selection and management
+    "github.com/0gfoundation/0g-storage-client/transfer"          // File upload/download operations
 )
 ```
 
@@ -52,7 +52,7 @@ This sets up:
 Select storage nodes and prepare the file for upload:
 ```go
 // Select available storage nodes
-nodes, _ := indexerClient.SelectNodes(ctx, 1, DefaultReplicas, nil)
+nodes, _ := indexerClient.SelectNodes(ctx, uint(DefaultReplicas), nil, "max", true)
 
 // Create uploader with selected nodes
 uploader, _ := transfer.NewUploader(ctx, web3Client, nodes)
@@ -82,10 +82,11 @@ This process:
 Locate nodes storing the file:
 ```go
 // Find nodes storing the file
-nodes, _ := indexerClient.SelectNodes(ctx, 1, DefaultReplicas, nil)
+nodes, _ := indexerClient.SelectNodes(ctx, uint(DefaultReplicas), nil, "max", true)
 
-// Create downloader instance
-downloader, _ := transfer.NewDownloader(nodes)
+// Combine trusted and discovered nodes for downloader
+allNodes := append(nodes.Trusted, nodes.Discovered...)
+downloader, _ := transfer.NewDownloader(allNodes)
 ```
 This step:
 - Uses root hash to find storage nodes
@@ -145,4 +146,4 @@ go run main.go -key YOUR_PRIVATE_KEY -download ROOT_HASH -output path/to/save
 - Clean up temporary resources
 
 ## Next Steps
-Explore more SDK features in the [0G Storage Client documentation](https://github.com/0glabs/0g-storage-client). Learn more about the [0G Storage Network](https://docs.0g.ai/0g-storage).
+Explore more SDK features in the [0G Storage Client documentation](https://github.com/0gfoundation/0g-storage-client). Learn more about the [0G Storage Network](https://docs.0g.ai/0g-storage).

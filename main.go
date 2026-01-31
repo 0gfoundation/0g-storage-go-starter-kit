@@ -117,7 +117,7 @@ func NewStorageClient(ctx context.Context, privateKey string, useTurbo bool) (*S
 		indexerRPC = IndexerRPCTurbo
 	}
 
-	indexerClient, err := indexer.NewClient(indexerRPC)
+	indexerClient, err := indexer.NewClient(indexerRPC, indexer.IndexerClientOption{})
 	if err != nil {
 		web3Client.Close()
 		return nil, fmt.Errorf("failed to create indexer client: %v", err)
@@ -142,7 +142,7 @@ func (c *StorageClient) UploadFile(filePath string) (string, string, error) {
 		return "", "", fmt.Errorf("failed to select storage nodes: %v", err)
 	}
 
-	uploader, err := transfer.NewUploader(c.ctx, c.web3Client, nodes)
+	uploader, err := transfer.NewUploaderWithContractConfig(c.ctx, c.web3Client, nodes, transfer.UploaderConfig{})
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create uploader: %v", err)
 	}

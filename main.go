@@ -15,12 +15,18 @@ import (
 	"github.com/openweb3/web3go"
 )
 
-// Network configuration for 0G Testnet
+// Network configuration
 const (
-	EvmRPC             = "https://evmrpc-testnet.0g.ai"
-	IndexerRPCStandard = "https://indexer-storage-testnet-standard.0g.ai"
-	IndexerRPCTurbo    = "https://indexer-storage-testnet-turbo.0g.ai"
-	DefaultReplicas    = 1
+	// Testnet
+	EvmRPCTestnet             = "https://evmrpc-testnet.0g.ai"
+	IndexerRPCTestnetStandard = "https://indexer-storage-testnet-standard.0g.ai"
+	IndexerRPCTestnetTurbo    = "https://indexer-storage-testnet-turbo.0g.ai"
+
+	// Mainnet
+	EvmRPCMainnet      = "https://evmrpc.0g.ai"
+	IndexerRPCMainnet  = "https://indexer-storage-turbo.0g.ai"
+
+	DefaultReplicas = 1
 )
 
 type StorageClient struct {
@@ -29,15 +35,24 @@ type StorageClient struct {
 	ctx           context.Context
 }
 
-func NewStorageClient(ctx context.Context, privateKey string, useTurbo bool) (*StorageClient, error) {
-	web3Client := blockchain.MustNewWeb3(EvmRPC, privateKey)
+func NewStorageClient(ctx context.Context, privateKey string, useTurbo, useMainnet bool) (*StorageClient, error) {
+	var evmRPC, indexerRPC string
 
-	indexerRPC := IndexerRPCStandard
-	if useTurbo {
-		indexerRPC = IndexerRPCTurbo
+	if useMainnet {
+		evmRPC = EvmRPCMainnet
+		indexerRPC = IndexerRPCMainnet
+	} else {
+		evmRPC = EvmRPCTestnet
+		if useTurbo {
+			indexerRPC = IndexerRPCTestnetTurbo
+		} else {
+			indexerRPC = IndexerRPCTestnetStandard
+		}
 	}
 
-	indexerClient, err := indexer.NewClient(indexerRPC)
+	web3Client := blockchain.MustNewWeb3(evmRPC, privateKey)
+
+	indexerClient, err := indexer.NewClient(indexerRPC, indexer.IndexerClientOption{})
 	if err != nil {
 		web3Client.Close()
 		return nil, fmt.Errorf("failed to create indexer client: %v", err)
@@ -62,7 +77,7 @@ func (c *StorageClient) UploadFile(filePath string) (string, error) {
 		return "", fmt.Errorf("failed to select storage nodes: %v", err)
 	}
 
-	uploader, err := transfer.NewUploader(c.ctx, c.web3Client, nodes)
+	uploader, err := transfer.NewUploaderWithContractConfig(c.ctx, c.web3Client, nodes, transfer.UploaderConfig{})
 	if err != nil {
 		return "", fmt.Errorf("failed to create uploader: %v", err)
 	}
@@ -112,7 +127,8 @@ func main() {
 	uploadPath := flag.String("upload", "", "Path to file to upload")
 	downloadHash := flag.String("download", "", "Root hash of file to download")
 	outputPath := flag.String("output", "", "Path to save downloaded file")
-	useTurbo := flag.Bool("turbo", false, "Use Turbo endpoint for faster but more expensive operations")
+	useTurbo := flag.Bool("turbo", false, "Use Turbo endpoint for faster operations (testnet only)")
+	useMainnet := flag.Bool("mainnet", false, "Use mainnet instead of testnet")
 	flag.Parse()
 
 	// Validate required flags
@@ -130,11 +146,17 @@ func main() {
 
 	// Create storage client
 	ctx := context.Background()
-	client, err := NewStorageClient(ctx, *privateKey, *useTurbo)
+	client, err := NewStorageClient(ctx, *privateKey, *useTurbo, *useMainnet)
 	if err != nil {
 		log.Fatalf("Failed to initialize storage client: %v", err)
 	}
 	defer client.Close()
+
+	network := "testnet"
+	if *useMainnet {
+		network = "mainnet"
+	}
+	log.Printf("Using %s network", network)
 
 	// Handle upload
 	if *uploadPath != "" {

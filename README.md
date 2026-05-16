@@ -240,4 +240,4 @@ const (
    - Implement retry logic for failed operations
 
 ## Next Steps
-Explore advanced SDK features in the [0G Storage Client documentation](https://github.com/0gfoundation/0g-storage-client). Learn more about the [0G Storage Network](https://docs.0g.ai/0g-storage).
+Explore advanced SDK features in the [0G Storage Client documentation](https://github.com/0gfoundation/0g-storage-client). Learn more about the [0G Storage Network](https://docs.0g.ai/concepts/storage).
